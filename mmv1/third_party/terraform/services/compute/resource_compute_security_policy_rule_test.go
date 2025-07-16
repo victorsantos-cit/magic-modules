@@ -2,46 +2,31 @@ package compute_test
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-provider-google/google/acctest"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-google/google/acctest"
+	"github.com/hashicorp/terraform-provider-google/google/envvar"
 )
 
-func TestAccComputeSecurityPolicyRule_basicUpdate(t *testing.T) {
+func TestAccComputeSecurityPolicy_basic(t *testing.T) {
 	t.Parallel()
 
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
 
 	acctest.VcrTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
 		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_preBasicUpdate(context),
+				Config: testAccComputeSecurityPolicy_basic(spName, "CLOUD_ARMOR"),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_postBasicUpdate(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_preBasicUpdate(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -49,107 +34,40 @@ func TestAccComputeSecurityPolicyRule_basicUpdate(t *testing.T) {
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_withRuleExpr(t *testing.T) {
+func TestAccComputeSecurityPolicy_basicUpdate(t *testing.T) {
 	t.Parallel()
 
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
 
 	acctest.VcrTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
 		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withRuleExpr(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccComputeSecurityPolicyRule_extendedUpdate(t *testing.T) {
-	t.Parallel()
-
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
-
-	acctest.VcrTest(t, resource.TestCase{
-		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
-		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccComputeSecurityPolicyRule_extPreUpdate(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config:      testAccComputeSecurityPolicyRule_extPosUpdateSamePriority(context),
-				ExpectError: regexp.MustCompile("Cannot have rules with the same priorities."),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_extPosUpdate(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccComputeSecurityPolicyRule_withPreconfiguredWafConfig(t *testing.T) {
-	t.Parallel()
-
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
-
-	acctest.VcrTest(t, resource.TestCase{
-		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
-		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccComputeSecurityPolicyRule_withPreconfiguredWafConfig_create(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withPreconfiguredWafConfig_update(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withPreconfiguredWafConfig_clear(context),
+				Config: testAccComputeSecurityPolicy_basic(spName, "CLOUD_ARMOR"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckNoResourceAttr("google_compute_security_policy_rule.policy_rule", "preconfigured_waf_config.0"),
+					resource.TestCheckResourceAttr("google_compute_security_policy.policy", "type", "CLOUD_ARMOR"),
 				),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_basic(spName, "CLOUD_ARMOR_EDGE"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("google_compute_security_policy.policy", plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("google_compute_security_policy.policy", "type", "CLOUD_ARMOR_EDGE"),
+				),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -157,61 +75,7 @@ func TestAccComputeSecurityPolicyRule_withPreconfiguredWafConfig(t *testing.T) {
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_withRateLimitOptions(t *testing.T) {
-	t.Parallel()
-
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
-
-	acctest.VcrTest(t, resource.TestCase{
-		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
-		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptionsCreate(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptionsUpdate(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccComputeSecurityPolicyRule_withRateLimit_withEnforceOnKeyConfigs(t *testing.T) {
-	t.Parallel()
-
-	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
-
-	acctest.VcrTest(t, resource.TestCase{
-		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
-		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKeyConfigs(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs(t *testing.T) {
+func TestAccComputeSecurityPolicy_withRule(t *testing.T) {
 	t.Parallel()
 
 	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
@@ -222,26 +86,10 @@ func TestAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnK
 		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs(spName),
+				Config: testAccComputeSecurityPolicy_withRule(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs2(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs3(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -249,7 +97,7 @@ func TestAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnK
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_EnforceOnKeyUpdates(t *testing.T) {
+func TestAccComputeSecurityPolicy_withRuleExpr(t *testing.T) {
 	t.Parallel()
 
 	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
@@ -260,50 +108,10 @@ func TestAccComputeSecurityPolicyRule_EnforceOnKeyUpdates(t *testing.T) {
 		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withoutRateLimitOptions(spName),
+				Config: testAccComputeSecurityPolicy_withRuleExpr(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKeyName(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKey(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKeyConfigs(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKey(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKeyName(spName),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -311,7 +119,99 @@ func TestAccComputeSecurityPolicyRule_EnforceOnKeyUpdates(t *testing.T) {
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_withExprOptions(t *testing.T) {
+func TestAccComputeSecurityPolicy_withPreconfiguredWafConfig(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withPreconfiguredWafConfig(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withPreconfiguredWafConfig_update(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withPreconfiguredWafConfig_clear(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withPreconfiguredWafConfig_removed(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"rule.1.preconfigured_waf_config.#", "rule.1.preconfigured_waf_config.0.%"}, // API will still return a empty object
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_update(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRule(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+
+			{
+				Config: testAccComputeSecurityPolicy_updateSamePriority(spName),
+				ExpectError: regexp.MustCompile("Two rules have the same priority, please update one of the priorities to be different."),
+			},
+
+			{
+				Config: testAccComputeSecurityPolicy_update(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+
+			{
+				Config: testAccComputeSecurityPolicy_withRule(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicyRule_securityPolicyDefaultRule(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]interface{}{
@@ -324,10 +224,18 @@ func TestAccComputeSecurityPolicyRule_withExprOptions(t *testing.T) {
 		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withExprOptions(context),
+				Config: testAccComputeSecurityPolicyRule_securityPolicyDefaultRuleDeny(context),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy_rule.policy_rule_default",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicyRule_securityPolicyDefaultRuleAllow(context),
+			},
+			{
+				ResourceName:      "google_compute_security_policy_rule.policy_rule_default",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -335,39 +243,64 @@ func TestAccComputeSecurityPolicyRule_withExprOptions(t *testing.T) {
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_modifyExprOptions(t *testing.T) {
+func TestAccComputeSecurityPolicy_withAdvancedOptionsConfig(t *testing.T) {
 	t.Parallel()
 
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
 
 	acctest.VcrTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
 		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withRuleExpr(context),
+				Config: testAccComputeSecurityPolicy_basic(spName, "CLOUD_ARMOR"),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccComputeSecurityPolicyRule_withExprOptions(context),
+				Config: testAccComputeSecurityPolicy_withAdvancedOptionsConfig(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccComputeSecurityPolicyRule_modifyExprOptions(context),
+				Config: testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// change all AdvancedOptionConfig values.
+			{
+				Config: testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update2(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Swap to json_parsing = STANDARD_WITH_GRAPHQL
+			{
+				Config: testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update3(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Add request_body_inspection_size value
+			{
+				Config: testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update4(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -375,31 +308,29 @@ func TestAccComputeSecurityPolicyRule_modifyExprOptions(t *testing.T) {
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_withRedirectOptionsUpdate(t *testing.T) {
+func TestAccComputeSecurityPolicy_withAdaptiveProtection(t *testing.T) {
 	t.Parallel()
 
-	context := map[string]interface{}{
-		"random_suffix": acctest.RandString(t, 10),
-	}
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
 
 	acctest.VcrTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
 		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withRedirectOptionsRecaptcha(context),
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_enabled(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccComputeSecurityPolicyRule_withRedirectOptionsExternal(context),
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_update(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -407,63 +338,60 @@ func TestAccComputeSecurityPolicyRule_withRedirectOptionsUpdate(t *testing.T) {
 	})
 }
 
-func TestAccComputeSecurityPolicyRule_withHeadAction(t *testing.T) {
+func TestAccComputeSecurityPolicy_withoutAdaptiveProtection(t *testing.T) {
 	t.Parallel()
 
-	context := map[string]interface{}{
-		"sp_name":      fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10)),
-		"header_name":  fmt.Sprintf("tf-test-header-name-%s", acctest.RandString(t, 10)),
-		"header_value": fmt.Sprintf("tf-test-header-value-%s", acctest.RandString(t, 10)),
-	}
-
-	contextUpdate := map[string]interface{}{
-		"sp_name":      context["sp_name"],
-		"header_name":  fmt.Sprintf("tf-test-header-name-update-%s", acctest.RandString(t, 10)),
-		"header_value": fmt.Sprintf("tf-test-header-value-update-%s", acctest.RandString(t, 10)),
-	}
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
 
 	acctest.VcrTest(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
 		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
-		CheckDestroy:             testAccCheckComputeSecurityPolicyRuleDestroyProducer(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeSecurityPolicyRule_withoutHeadAction(context),
+				// Can create with layer 7 protection disabled
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_disabled(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccComputeSecurityPolicyRule_withHeadAction(context),
+				// Can update to layer 7 protection enabled
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_enabled(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				// Can update to layer 7 protection disabled again
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_disabled(spName),
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withAdaptiveProtection_withThresholdConfigs(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_enabled_withThresholdConfigs(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccComputeSecurityPolicyRule_withHeadAction(contextUpdate),
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtection_update_ThresholdConfigs(spName),
 			},
 			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withMultipleHeaders(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccComputeSecurityPolicyRule_withoutHeadAction(context),
-			},
-			{
-				ResourceName:      "google_compute_security_policy_rule.policy_rule",
+				ResourceName:      "google_compute_security_policy.policy",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -471,7 +399,602 @@ func TestAccComputeSecurityPolicyRule_withHeadAction(t *testing.T) {
 	})
 }
 
-func testAccComputeSecurityPolicyRule_preBasicUpdate(context map[string]interface{}) string {
+{{ if ne $.TargetVersionName `ga` -}}
+func TestAccComputeSecurityPolicy_withAdaptiveProtectionAutoDeployConfig(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtectionAutoDeployConfig(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withAdaptiveProtectionAutoDeployConfig_update(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+{{- end }}
+
+func TestAccComputeSecurityPolicy_withRateLimitOptions(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withRateLimitWithRedirectOptions(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitWithRedirectOptions(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withRateLimit_withEnforceOnKeyConfigs(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKeyConfigs(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs2(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs3(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+
+func TestAccComputeSecurityPolicy_EnforceOnKeyUpdates(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withoutRateLimitOptions(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKeyName(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKey(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKeyConfigs(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKey(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKeyName(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withRecaptchaOptionsConfig(t *testing.T) {
+	t.Parallel()
+
+	project := envvar.GetTestProjectFromEnv()
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_basic(spName, "CLOUD_ARMOR"),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRecaptchaOptionsConfig(project, spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRedirectSiteKeyUpdate(project, spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withEmptyRedirectSiteKey(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withHeadAction(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+	headerName := fmt.Sprintf("tf-test-header-name-%s", acctest.RandString(t, 10))
+	headerNameUpdate := fmt.Sprintf("tf-test-header-name-update-%s", acctest.RandString(t, 10))
+	headerValue := fmt.Sprintf("tf-test-header-value-%s", acctest.RandString(t, 10))
+	headerValueUpdate := fmt.Sprintf("tf-test-header-value-update-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withoutHeadAction(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withHeadAction(spName, headerName, headerValue),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withHeadAction(spName, headerNameUpdate, headerValueUpdate),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withMultipleHeaders(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withoutHeadAction(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withExprOptions(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withExprOptions(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_modifyExprOptions(t *testing.T) {
+	t.Parallel()
+
+  spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRule(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withExprOptions(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_modifyExprOptions(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccComputeSecurityPolicy_withRecaptchaOptionsConfig(project, spName string) string {
+	return fmt.Sprintf(`
+resource "google_recaptcha_enterprise_key" "primary" {
+  display_name = "test"
+
+  labels = {
+    label-one = "value-one"
+   }
+
+  project = "%s"
+
+  web_settings {
+    integration_type  = "INVISIBLE"
+    allow_all_domains = true
+    allowed_domains   = ["localhost"]
+  }
+}
+
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "basic security policy"
+  type        = "CLOUD_ARMOR"
+
+  recaptcha_options_config {
+    redirect_site_key = google_recaptcha_enterprise_key.primary.name
+  }
+}
+`, project, spName)
+}
+
+func testAccComputeSecurityPolicy_withRedirectSiteKeyUpdate(project, spName string) string {
+	return fmt.Sprintf(`
+resource "google_recaptcha_enterprise_key" "primary1" {
+  display_name = "test"
+
+  labels = {
+    label-one = "value-one"
+   }
+
+  project = "%s"
+
+  web_settings {
+    integration_type  = "INVISIBLE"
+    allow_all_domains = true
+    allowed_domains   = ["localhost"]
+  }
+}
+
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "basic security policy"
+  type        = "CLOUD_ARMOR"
+
+  recaptcha_options_config {
+    redirect_site_key = google_recaptcha_enterprise_key.primary1.name
+  }
+}
+`, project, spName)
+}
+
+func testAccComputeSecurityPolicy_withEmptyRedirectSiteKey(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "basic security policy"
+  type        = "CLOUD_ARMOR"
+
+  recaptcha_options_config {
+    redirect_site_key = ""
+  }
+}
+`, spName)
+}
+
+func testAccCheckComputeSecurityPolicyDestroyProducer(t *testing.T) func(s *terraform.State) error {
+	return func(s *terraform.State) error {
+		config := acctest.GoogleProviderConfig(t)
+
+		for _, rs := range s.RootModule().Resources {
+			if rs.Type != "google_compute_security_policy" {
+				continue
+			}
+
+			pol := rs.Primary.Attributes["name"]
+
+			_, err := config.NewComputeClient(config.UserAgent).SecurityPolicies.Get(config.Project, pol).Do()
+			if err == nil {
+				return fmt.Errorf("Security policy %q still exists", pol)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccComputeSecurityPolicy_basic(spName, policyType string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "basic security policy"
+  type        = "%s"
+}
+`, spName, policyType)
+}
+
+func testAccComputeSecurityPolicy_withRule(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name = "%s"
+
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    description = "default rule"
+  }
+
+  rule {
+    action   = "allow"
+    priority = "2000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["10.0.0.0/24"]
+      }
+    }
+    preview = true
+  }
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_updateSamePriority(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
+
+  // keep this
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    description = "default rule"
+  }
+
+  // add this
+  rule {
+    action   = "deny(403)"
+    priority = "2000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["10.0.1.0/24"]
+      }
+    }
+  }
+
+  rule {
+    action   = "allow"
+    priority = "2000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["10.0.0.0/24"]
+      }
+    }
+    preview = true
+  }
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_update(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
+
+  // keep this
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    description = "default rule"
+  }
+
+  // add this
+  rule {
+    action   = "deny(403)"
+    priority = "1000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["10.0.1.0/24"]
+      }
+    }
+  }
+
+  // update this
+  rule {
+    action   = "allow"
+    priority = "2000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["10.0.0.0/24"]
+      }
+    }
+    description = "updated description"
+    preview     = false
+  }
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicyRule_securityPolicyDefaultRuleDeny(context map[string]interface{}) string {
 	return acctest.Nprintf(`
 resource "google_compute_security_policy" "default" {
   name        = "tf-test%{random_suffix}"
@@ -479,23 +1002,22 @@ resource "google_compute_security_policy" "default" {
   type        = "CLOUD_ARMOR"
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
+resource "google_compute_security_policy_rule" "policy_rule_default" {
   security_policy = google_compute_security_policy.default.name
-  description     = "basic rule pre update"
-  action          = "allow"
-  priority        = 100
-  preview         = false
+  description     = "default rule"
+  action          = "deny"
+  priority        = "2147483647"
   match {
     versioned_expr = "SRC_IPS_V1"
     config {
-      src_ip_ranges = ["192.168.0.0/16", "10.0.0.0/8"]
+      src_ip_ranges = ["*"]
     }
   }
 }
 `, context)
 }
 
-func testAccComputeSecurityPolicyRule_postBasicUpdate(context map[string]interface{}) string {
+func testAccComputeSecurityPolicyRule_securityPolicyDefaultRuleAllow(context map[string]interface{}) string {
 	return acctest.Nprintf(`
 resource "google_compute_security_policy" "default" {
   name        = "tf-test%{random_suffix}"
@@ -503,842 +1025,1195 @@ resource "google_compute_security_policy" "default" {
   type        = "CLOUD_ARMOR"
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
+resource "google_compute_security_policy_rule" "policy_rule_default" {
   security_policy = google_compute_security_policy.default.name
-  description     = "basic rule post update"
-  action          = "deny(403)"
-  priority        = 100
-  preview         = true
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["172.16.0.0/12"]
-    }
-  }
-}
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withRuleExpr(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
-}
-
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "basic description"
+  description     = "default rule"
   action          = "allow"
-  priority        = "2000"
+  priority        = "2147483647"
   match {
-    expr {
-      expression = "evaluatePreconfiguredExpr('xss-canary')"
+    versioned_expr = "SRC_IPS_V1"
+    config {
+      src_ip_ranges = ["*"]
     }
   }
-  preview = true
 }
 `, context)
 }
 
-func testAccComputeSecurityPolicyRule_extPreUpdate(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
-}
-
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "basic description"
-  action          = "allow"
-  priority        = "2000"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["10.0.0.0/24"]
-    }
-  }
-  preview = true
-}
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_extPosUpdateSamePriority(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
-}
-
-//add this
-resource "google_compute_security_policy_rule" "policy_rule2" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "basic description"
-  action          = "deny(403)"
-  priority        = "2000"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["10.0.0.0/24"]
-    }
-  }
-  preview = true
-}
-
-//keep this
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "basic description"
-  action          = "allow"
-  priority        = "2000"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["10.0.0.0/24"]
-    }
-  }
-  preview = true
-}
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_extPosUpdate(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
-}
-
-//add this
-resource "google_compute_security_policy_rule" "policy_rule2" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "basic description"
-  action          = "deny(403)"
-  priority        = "1000"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["10.0.0.0/24"]
-    }
-  }
-  preview = true
-}
-
-//update this
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "updated description"
-  action          = "allow"
-  priority        = "2000"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["10.0.0.0/24"]
-    }
-  }
-  preview = true
-}
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withPreconfiguredWafConfig_create(context map[string]interface{}) string {
-	return acctest.Nprintf(`
+func testAccComputeSecurityPolicy_withRuleExpr(spName string) string {
+	return fmt.Sprintf(`
 resource "google_compute_security_policy" "policy" {
-  name        = "tf-test%{random_suffix}"
-  description = "Global security policy - create"
+	name = "%s"
+
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
+
+	rule {
+		action   = "allow"
+		priority = "2000"
+		match {
+			expr {
+				// These fields are not yet supported (Issue hashicorp/terraform-provider-google#4497: mbang)
+				// title = "Has User"
+				// description = "Determines whether the request has a user account"
+				expression = "evaluatePreconfiguredExpr('xss-canary')"
+			}
+		}
+		preview = true
+	}
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "Rule with preconfiguredWafConfig - create"
-  action   = "deny"
-  priority = "1000"
-  match {
-    expr {
-      expression = "evaluatePreconfiguredWaf('sqli-stable')"
-    }
-  }
-  preconfigured_waf_config {
-    exclusion {
-      request_cookie {
-        operator = "EQUALS_ANY"
-      }
-      request_header {
-        operator = "EQUALS"
-        value    = "Referer"
-      }
-      request_uri {
-        operator = "STARTS_WITH"
-        value    = "/admin"
-      }
-      request_query_param {
-        operator = "EQUALS"
-        value    = "password"
-      }
-      request_query_param {
-        operator = "STARTS_WITH"
-        value    = "freeform"
-      }
-      target_rule_set = "sqli-stable"
-    }
-    exclusion {
-      request_query_param {
-        operator = "CONTAINS"
-        value    = "password"
-      }
-      request_query_param {
-        operator = "STARTS_WITH"
-        value    = "freeform"
-      }
-      target_rule_set = "xss-stable"
-    }
-  }
-  preview = false
-}
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withPreconfiguredWafConfig_update(context map[string]interface{}) string {
-	return acctest.Nprintf(`
+func testAccComputeSecurityPolicy_withPreconfiguredWafConfig(spName string) string {
+	return fmt.Sprintf(`
 resource "google_compute_security_policy" "policy" {
-  name        = "tf-test%{random_suffix}"
-  description = "Global security policy - update"
+	name = "%s"
+
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
+
+	rule {
+		action   = "deny"
+		priority = "1000"
+		match {
+			expr {
+				expression = "evaluatePreconfiguredWaf('sqli-stable')"
+			}
+		}
+		preconfigured_waf_config {
+			exclusion {
+				request_cookie {
+					operator = "EQUALS_ANY"
+				}
+				request_header {
+					operator = "EQUALS"
+					value    = "Referer"
+				}
+				request_uri {
+					operator = "STARTS_WITH"
+					value    = "/admin"
+				}
+				request_query_param {
+					operator = "EQUALS"
+					value    = "password"
+				}
+				request_query_param {
+					operator = "STARTS_WITH"
+					value    = "freeform"
+				}
+				target_rule_set = "sqli-stable"
+			}
+			exclusion {
+				request_query_param {
+					operator = "CONTAINS"
+					value    = "password"
+				}
+				request_query_param {
+					operator = "STARTS_WITH"
+					value    = "freeform"
+				}
+				target_rule_set = "xss-stable"
+			}
+		}
+		preview = false
+	}
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "Rule with preconfiguredWafConfig - update"
-  action   = "deny"
-  priority = "1000"
-  match {
-    expr {
-      expression = "evaluatePreconfiguredWaf('rce-stable') || evaluatePreconfiguredWaf('xss-stable')"
+func testAccComputeSecurityPolicy_withPreconfiguredWafConfig_update(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name = "%s"
+
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
+
+	rule {
+		action   = "deny"
+		priority = "1000"
+		match {
+			expr {
+				expression = "evaluatePreconfiguredWaf('rce-stable') || evaluatePreconfiguredWaf('xss-stable')"
+			}
+		}
+		preconfigured_waf_config {
+			exclusion {
+				request_uri {
+					operator = "STARTS_WITH"
+					value    = "/admin"
+				}
+				target_rule_set = "rce-stable"
+			}
+			exclusion {
+				request_query_param {
+					operator = "CONTAINS"
+					value    = "password"
+				}
+				request_query_param {
+					operator = "STARTS_WITH"
+					value    = "freeform"
+				}
+				request_query_param {
+					operator = "EQUALS"
+					value    = "description"
+				}
+				target_rule_set = "xss-stable"
+				target_rule_ids = [
+					"owasp-crs-v030001-id941330-xss",
+					"owasp-crs-v030001-id941340-xss",
+				]
+			}
+		}
+		preview = false
+	}
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withPreconfiguredWafConfig_clear(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name = "%s"
+
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
+
+	rule {
+		action   = "deny"
+		priority = "1000"
+		match {
+			expr {
+				expression = "evaluatePreconfiguredWaf('rce-stable') || evaluatePreconfiguredWaf('xss-stable')"
+			}
+		}
+		preconfigured_waf_config {
+			// ensure empty waf config //
+		}
+		preview = false
+	}
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withPreconfiguredWafConfig_removed(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name = "%s"
+
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
+
+	rule {
+		action   = "deny"
+		priority = "1000"
+		match {
+			expr {
+				expression = "evaluatePreconfiguredWaf('rce-stable') || evaluatePreconfiguredWaf('xss-stable')"
+			}
+		}
+		// remove waf config field to test if last step wont cause a permadiff //
+		preview = false
+	}
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withoutHeadAction(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name = "%s"
+
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+      description = "default rule"
+	}
+
+  rule {
+    action   = "allow"
+    priority = "1000"
+    match {
+      expr {
+        expression = "request.path.matches(\"/login.html\") && token.recaptcha_session.score < 0.2"
+      }
     }
   }
-  preconfigured_waf_config {
-    exclusion {
-      request_uri {
-        operator = "STARTS_WITH"
-        value    = "/admin"
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withHeadAction(spName, headerName, headerValue string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name = "%s"
+
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
       }
-      target_rule_set = "rce-stable"
     }
-    exclusion {
-      request_query_param {
-        operator = "CONTAINS"
-        value    = "password"
+    description = "default rule"
+  }
+
+  rule {
+    action   = "allow"
+    priority = "1000"
+    match {
+      expr {
+        expression = "request.path.matches(\"/login.html\") && token.recaptcha_session.score < 0.2"
       }
-      request_query_param {
-        operator = "STARTS_WITH"
-        value    = "freeform"
+    }
+
+    header_action {
+      request_headers_to_adds {
+        header_name  = "%s"
+        header_value = "%s"
       }
-      request_query_param {
-        operator = "EQUALS"
-        value    = "description"
+    }
+  }
+}
+`, spName, headerName, headerValue)
+}
+
+func testAccComputeSecurityPolicy_withMultipleHeaders(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name = "%s"
+
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
       }
-      request_cookie {
-        operator = "CONTAINS"
-        value    = "TokenExpired"
+    }
+    description = "default rule"
+  }
+
+  rule {
+    action   = "allow"
+    priority = "1000"
+    match {
+      expr {
+        expression = "request.path.matches(\"/login.html\") && token.recaptcha_session.score < 0.2"
       }
-      target_rule_set = "xss-stable"
-      target_rule_ids = [
-        "owasp-crs-v030001-id941330-xss",
-        "owasp-crs-v030001-id941340-xss",
+    }
+
+    header_action {
+      request_headers_to_adds {
+        header_name  = "reCAPTCHA-Warning"
+        header_value = "high"
+      }
+
+      request_headers_to_adds {
+        header_name  = "X-Hello"
+        header_value = "World"
+      }
+
+      request_headers_to_adds {
+        header_name  = "X-Resource"
+        header_value = "test"
+      }
+    }
+  }
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withAdvancedOptionsConfig(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
+
+  advanced_options_config {
+    json_parsing = "STANDARD"
+    json_custom_config {
+      content_types = [
+        "application/json",
+        "application/vnd.api+json",
+        "application/vnd.collection+json",
+        "application/vnd.hyper+json"
       ]
     }
+    log_level    = "VERBOSE"
+    user_ip_request_headers = [
+      "True-Client-IP",
+      "x-custom-ip"
+    ]
   }
-  preview = false
 }
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withPreconfiguredWafConfig_clear(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "policy" {
-  name        = "tf-test%{random_suffix}"
-  description = "Global security policy - clear"
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "Rule with preconfiguredWafConfig - clear"
-  action   = "deny"
-  priority = "1000"
-  match {
-    expr {
-      expression = "evaluatePreconfiguredWaf('rce-stable') || evaluatePreconfiguredWaf('xss-stable')"
-    }
-  }
-  preview = false
-}
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withRateLimitOptionsCreate(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-  resource "google_compute_security_policy" "default" {
-    name        = "tf-test%{random_suffix}"
-    description = "basic global security policy"
-  }
-
-  resource "google_compute_security_policy_rule" "policy_rule" {
-    security_policy = google_compute_security_policy.default.name
-    description     = "rule create with rate limit"
-    priority        = 101
-    action          = "rate_based_ban"
-    rate_limit_options {
-      rate_limit_threshold {
-        count = 500
-        interval_sec = 10
-      }
-      conform_action = "allow"
-      exceed_action = "deny(404)"
-      enforce_on_key = "ALL"
-      ban_threshold {
-        count = 750
-        interval_sec = 180
-      }
-      ban_duration_sec = 180
-    }
-    match {
-      config {
-        src_ip_ranges = [
-          "*"
-        ]
-      }
-      versioned_expr = "SRC_IPS_V1"
-    }
-  }
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withRateLimitOptionsUpdate(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-  resource "google_compute_security_policy" "default" {
-    name        = "tf-test%{random_suffix}"
-    description = "basic global security policy"
-  }
-
-  resource "google_compute_security_policy_rule" "policy_rule" {
-    security_policy = google_compute_security_policy.default.name
-    description     = "rule update with rate limit update"
-    priority        = 101
-    action          = "rate_based_ban"
-    rate_limit_options {
-      rate_limit_threshold {
-        count = 1000
-        interval_sec = 30
-      }
-      conform_action = "allow"
-      exceed_action = "deny(404)"
-      enforce_on_key = "ALL"
-      ban_threshold {
-        count = 2000
-        interval_sec = 180
-      }
-      ban_duration_sec = 300
-    }
-    match {
-      config {
-        src_ip_ranges = [
-          "*"
-        ]
-      }
-      versioned_expr = "SRC_IPS_V1"
-    }
-  }
-`, context)
-}
-
-func testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKey(spName string) string {
+func testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update(spName string) string {
 	return fmt.Sprintf(`
 resource "google_compute_security_policy" "policy" {
   name        = "%s"
-  description = "basic policy base"
+  description = "updated description changing the user_ip"
+
+  advanced_options_config {
+    json_parsing = "STANDARD"
+    json_custom_config {
+      content_types = [
+        "application/json",
+        "application/vnd.api+json",
+        "application/vnd.collection+json",
+        "application/vnd.hyper+json"
+      ]
+    }
+    log_level    = "VERBOSE"
+    user_ip_request_headers = [
+      "x-custom-ip",
+    ]
+  }
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "throttle rule withEnforceOnKey"
-  action          = "throttle"
-  priority        = "100"
-  
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
+func testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update2(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description changing all advancedOptionsConfig values"
+
+  advanced_options_config {
+    json_parsing = "DISABLED"
+    json_custom_config {
+      content_types = [
+        "application/json",
+        "application/vnd.hyper+json"
+      ]
     }
+    log_level    = "NORMAL"
+    user_ip_request_headers = [
+    ]
   }
+}
+`, spName)
+}
 
-  rate_limit_options {
-    conform_action = "allow"
-    exceed_action = "redirect"
+func testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update3(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description changing json_parsing to STANDARD_WITH_GRAPHQL"
 
-    enforce_on_key = "IP"
-
-    exceed_redirect_options {
-      type = "EXTERNAL_302"
-      target = "https://www.example.com"
+  advanced_options_config {
+    json_parsing = "STANDARD_WITH_GRAPHQL"
+    json_custom_config {
+      content_types = [
+        "application/json",
+        "application/vnd.hyper+json"
+      ]
     }
+    log_level    = "NORMAL"
+    user_ip_request_headers = [
+    ]
+  }
+}
+`, spName)
+}
 
-    rate_limit_threshold {
-      count = 10
-      interval_sec = 60
+func testAccComputeSecurityPolicy_withAdvancedOptionsConfig_update4(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description changing json_parsing to STANDARD_WITH_GRAPHQL"
+
+  advanced_options_config {
+    json_parsing = "STANDARD_WITH_GRAPHQL"
+    json_custom_config {
+      content_types = [
+        "application/json",
+        "application/vnd.hyper+json"
+      ]
+    }
+    log_level    = "NORMAL"
+    user_ip_request_headers = []
+    request_body_inspection_size = "64KB"
+  }
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withoutAdaptiveProtection(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withAdaptiveProtection_disabled(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
+
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = false
     }
   }
 }
 `, spName)
 }
 
-func testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKeyConfigs(spName string) string {
+func testAccComputeSecurityPolicy_withAdaptiveProtection_enabled(spName string) string {
 	return fmt.Sprintf(`
 resource "google_compute_security_policy" "policy" {
   name        = "%s"
-  description = "basic policy base"
+  description = "updated description"
+
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = true
+      rule_visibility = "STANDARD"
+	}
+  }
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "throttle rule withEnforceOnKeyConfigs"
-  action          = "throttle"
-  priority        = "100"
+func testAccComputeSecurityPolicy_withAdaptiveProtection_enabled_withThresholdConfigs(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
 
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = true
+      rule_visibility = "STANDARD"
+			threshold_configs {
+				name                                    = "threshold-name"
+				auto_deploy_load_threshold              = 0.1
+				auto_deploy_confidence_threshold        = 0.5
+				auto_deploy_impacted_baseline_threshold = 0.02
+				auto_deploy_expiration_sec              = 3600
+				detection_load_threshold                = 0.7
+				detection_absolute_qps                  = 1.0
+				detection_relative_to_baseline_qps      = 1.1
+				traffic_granularity_configs {
+					type                     = "HTTP_HEADER_HOST"
+					enable_each_unique_value = true
+				}
+			}
+	}
   }
+}
+`, spName)
+}
 
-  rate_limit_options {
-    conform_action = "allow"
-    exceed_action = "redirect"
+func testAccComputeSecurityPolicy_withAdaptiveProtection_update_ThresholdConfigs(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
 
-    enforce_on_key = ""
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = true
+      rule_visibility = "STANDARD"
+			threshold_configs {
+				name                                    = "threshold-name-updated"
+				auto_deploy_load_threshold              = 0.2
+				auto_deploy_confidence_threshold        = 0.6
+				auto_deploy_impacted_baseline_threshold = 0.03
+				auto_deploy_expiration_sec              = 7200
+				detection_load_threshold                = 0.8
+				detection_absolute_qps                  = 1.1
+				detection_relative_to_baseline_qps      = 1.2
+			}
+	}
+  }
+}
+`, spName)
+}
 
-    enforce_on_key_configs {
-      enforce_on_key_type = "IP"
-    }
-    exceed_redirect_options {
-      type = "EXTERNAL_302"
-      target = "https://www.example.com"
-    }
+func testAccComputeSecurityPolicy_withAdaptiveProtection_update(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+  name        = "%s"
+  description = "updated description"
 
-    rate_limit_threshold {
-      count = 10
-      interval_sec = 60
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = false
+      rule_visibility = "STANDARD"
     }
   }
 }
 `, spName)
 }
 
-func testAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs(spName string) string {
+{{ if ne $.TargetVersionName `ga` -}}
+func testAccComputeSecurityPolicy_withAdaptiveProtectionAutoDeployConfig(spName string) string {
 	return fmt.Sprintf(`
 resource "google_compute_security_policy" "policy" {
   name        = "%s"
-  description = "basic policy base"
-}
+  description = "updated description"
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "throttle rule with withMultipleEnforceOnKeyConfigs"
-  action          = "throttle"
-  priority        = "100"
-
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-
-  rate_limit_options {
-    conform_action = "allow"
-    exceed_action = "deny(429)"
-
-    rate_limit_threshold {
-      count = 10
-      interval_sec = 60
-    }
-
-    enforce_on_key = ""
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "HTTP_PATH"
-    }
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "HTTP_HEADER"
-      enforce_on_key_name = "user-agent"
-    }
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "REGION_CODE"
+  adaptive_protection_config {
+    auto_deploy_config {
+      load_threshold = 0.8
+      confidence_threshold = 0.5
+      impacted_baseline_threshold = 0.01
+      expiration_sec = 7200
     }
   }
 }
 `, spName)
 }
 
-func testAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs2(spName string) string {
+func testAccComputeSecurityPolicy_withAdaptiveProtectionAutoDeployConfig_update(spName string) string {
 	return fmt.Sprintf(`
 resource "google_compute_security_policy" "policy" {
   name        = "%s"
-  description = "basic policy base"
-}
+  description = "updated description"
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "throttle rule withMultipleEnforceOnKeyConfigs2"
-  action          = "throttle"
-  priority        = "100"
-
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-
-  rate_limit_options {
-    conform_action = "allow"
-    exceed_action = "deny(429)"
-
-    rate_limit_threshold {
-      count = 10
-      interval_sec = 60
-    }
-
-    enforce_on_key = ""
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "REGION_CODE"
-    }
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "TLS_JA3_FINGERPRINT"
-    }
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "USER_IP"
-    }
-  }
-}
-
-`, spName)
-}
-
-func testAccComputeSecurityPolicyRule_withRateLimitOption_withMultipleEnforceOnKeyConfigs3(spName string) string {
-	return fmt.Sprintf(`
-resource "google_compute_security_policy" "policy" {
-  name        = "%s"
-  description = "basic policy base"
-}
-
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "throttle rule withMultipleEnforceOnKeyConfigs3"
-  action          = "throttle"
-  priority        = "100"
-
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-
-  rate_limit_options {
-    conform_action = "allow"
-    exceed_action = "deny(429)"
-
-    rate_limit_threshold {
-      count = 10
-      interval_sec = 60
-    }
-
-    enforce_on_key = ""
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "REGION_CODE"
-    }
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "TLS_JA4_FINGERPRINT"
-    }
-
-    enforce_on_key_configs {
-      enforce_on_key_type = "USER_IP"
-    }
-  }
-}
-
-`, spName)
-}
-
-func testAccComputeSecurityPolicyRule_withRateLimitOptions_withoutRateLimitOptions(spName string) string {
-	return fmt.Sprintf(`
-resource "google_compute_security_policy" "policy" {
-  name        = "%s"
-  description = "basic policy base"
-}
-
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "basic policy rule withoutRateLimitOptions"
-  action          = "deny(403)"
-  priority        = "100"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-}
-
-`, spName)
-}
-
-func testAccComputeSecurityPolicyRule_withRateLimitOptions_withEnforceOnKeyName(spName string) string {
-	return fmt.Sprintf(`
-resource "google_compute_security_policy" "policy" {
-  name        = "%s"
-  description = "basic policy base"
-}
-
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.policy.name
-  description     = "throttle rule withEnforceOnKeyName"
-  action          = "throttle"
-  priority        = "100"
-
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-
-  rate_limit_options {
-    conform_action = "allow"
-    exceed_action = "redirect"
-
-    enforce_on_key = "HTTP_HEADER"
-    enforce_on_key_name = "user-agent"
-
-    exceed_redirect_options {
-      type = "EXTERNAL_302"
-      target = "https://www.example.com"
-    }
-
-    rate_limit_threshold {
-      count = 10
-      interval_sec = 60
+  adaptive_protection_config {
+    auto_deploy_config {
+      load_threshold = 0.9
+      confidence_threshold = 0.6
+      impacted_baseline_threshold = 0.03
+      expiration_sec = 8000
     }
   }
 }
 `, spName)
 }
+{{- end }}
 
-func testAccComputeSecurityPolicyRule_withExprOptions(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-	name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
-}
+func testAccComputeSecurityPolicy_withRateLimitOptions(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "updated description"
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "reCAPTCHA rule"
-  action          = "deny(403)"
-  priority        = "2000"
-  preview         = true
-  match {
-    expr {
-      expression = "request.path.endsWith('RegisterWithEmail') && token.recaptcha_action.score >= 0.8 && (token.recaptcha_action.valid)"
-    }
-    expr_options {
-      recaptcha_options {
-        action_token_site_keys = [
-          "placeholder-recaptcha-action-site-key-01",
-          "placeholder-recaptcha-action-site-key-02"
-        ]
-        session_token_site_keys = [
-          "placeholder-recaptcha-session-site-key-1",
-          "placeholder-recaptcha-session-site-key-2"
-        ]
-      }
-    }
-  }
-}
-`, context)
-}
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
 
-func testAccComputeSecurityPolicyRule_modifyExprOptions(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
+	rule {
+		action = "throttle"
+		priority = 100
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = [
+					"0.0.0.0/32",
+				]
+			}
+		}
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "deny(403)"
+			enforce_on_key = "IP"
+			rate_limit_threshold {
+				count = 100
+				interval_sec = 60
+			}
+		}
+	}
 }
-
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  description     = "modified reCAPTCHA rule"
-  action          = "deny(403)"
-  priority        = "2000"
-  preview         = true
-  match {
-    expr {
-      expression = "request.path.endsWith('RegisterWithEmail') && token.recaptcha_action.score >= 0.8 && (token.recaptcha_action.valid)"
-    }
-    expr_options {
-      recaptcha_options {
-        action_token_site_keys = [
-          "placeholder-recaptcha-action-site-key-09",
-          "placeholder-recaptcha-action-site-key-08",
-          "placeholder-recaptcha-action-site-key-07"
-        ]
-        session_token_site_keys = [
-          "placeholder-recaptcha-session-site-key-1"
-        ]
-      }
-    }
-  }
-}
-`, context)
+`, spName)
 }
 
-func testAccComputeSecurityPolicyRule_withRedirectOptionsRecaptcha(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
+func testAccComputeSecurityPolicy_withRateLimitWithRedirectOptions(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "updated description"
+
+	rule {
+		action   = "allow"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+	}
+
+	rule {
+		action = "throttle"
+		priority = 100
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = [
+					"0.0.0.0/32",
+				]
+			}
+		}
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "redirect"
+			enforce_on_key = "IP"
+			exceed_redirect_options {
+				type = "EXTERNAL_302"
+				target = "https://www.example.com"
+			}
+			rate_limit_threshold {
+				count = 100
+				interval_sec = 60
+			}
+		}
+	}
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  action          = "redirect"
-  priority        = "100"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-  redirect_options {
-    type = "GOOGLE_RECAPTCHA"
-  }
+func testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKey(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
+
+	rule {
+		action   = "throttle"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withEnforceOnKey"
+
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "redirect"
+
+			enforce_on_key = "IP"
+
+			exceed_redirect_options {
+				type = "EXTERNAL_302"
+				target = "https://www.example.com"
+			}
+
+			rate_limit_threshold {
+				count = 10
+				interval_sec = 60
+			}
+		}
+	}
 }
-`, context)
+`, spName)
 }
 
-func testAccComputeSecurityPolicyRule_withRedirectOptionsExternal(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "tf-test%{random_suffix}"
-  description = "basic global security policy"
+func testAccComputeSecurityPolicy_withRateLimitOptions_withoutRateLimitOptions(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
+
+	rule {
+		action   = "deny(403)"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withoutRateLimitOptions"
+	}
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  action          = "redirect"
-  priority        = "100"
-  match {
-    versioned_expr = "SRC_IPS_V1"
-    config {
-      src_ip_ranges = ["*"]
-    }
-  }
-  redirect_options {
-    type = "EXTERNAL_302"
-    target = "https://example.com"
-  }
-}
-`, context)
-}
+func testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKeyName(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
 
-func testAccComputeSecurityPolicyRule_withoutHeadAction(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "%{sp_name}"
-  description = "basic global security policy"
-}
+	rule {
+		action   = "throttle"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withEnforceOnKeyName"
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  action   = "allow"
-  priority = "1000"
-  match {
-    expr {
-      expression = "request.path.matches(\"/login.html\") && token.recaptcha_session.score < 0.2"
-    }
-  }
-}
-`, context)
-}
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "redirect"
 
-func testAccComputeSecurityPolicyRule_withHeadAction(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "%{sp_name}"
-  description = "basic global security policy"
+			enforce_on_key = "HTTP_HEADER"
+			enforce_on_key_name = "user-agent"
+
+			exceed_redirect_options {
+				type = "EXTERNAL_302"
+				target = "https://www.example.com"
+			}
+
+			rate_limit_threshold {
+				count = 10
+				interval_sec = 60
+			}
+		}
+	}
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  action   = "allow"
-  priority = "1000"
-  match {
-    expr {
-      expression = "request.path.matches(\"/login.html\") && token.recaptcha_session.score < 0.2"
-    }
-  }
+func testAccComputeSecurityPolicy_withRateLimitOptions_withEnforceOnKeyConfigs(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
 
-  header_action {
-    request_headers_to_adds {
-      header_name  = "%{header_name}"
-      header_value = "%{header_value}"
-    }
-  }
+	rule {
+		action   = "throttle"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withEnforceOnKeyConfigs"
+
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "redirect"
+
+			enforce_on_key = ""
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "IP"
+			}
+			exceed_redirect_options {
+				type = "EXTERNAL_302"
+				target = "https://www.example.com"
+			}
+
+			rate_limit_threshold {
+				count = 10
+				interval_sec = 60
+			}
+		}
+	}
 }
-`, context)
+`, spName)
 }
 
-func testAccComputeSecurityPolicyRule_withMultipleHeaders(context map[string]interface{}) string {
-	return acctest.Nprintf(`
-resource "google_compute_security_policy" "default" {
-  name        = "%{sp_name}"
-  description = "basic global security policy"
+func testAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
+
+	rule {
+		action   = "throttle"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withMultipleEnforceOnKeyConfigs"
+
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "deny(429)"
+
+			rate_limit_threshold {
+				count = 10
+				interval_sec = 60
+			}
+
+			enforce_on_key = ""
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "HTTP_PATH"
+			}
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "HTTP_HEADER"
+				enforce_on_key_name = "user-agent"
+			}
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "REGION_CODE"
+			}
+		}
+	}
+}
+`, spName)
 }
 
-resource "google_compute_security_policy_rule" "policy_rule" {
-  security_policy = google_compute_security_policy.default.name
-  action   = "allow"
-  priority = "1000"
-  match {
-    expr {
-      expression = "request.path.matches(\"/login.html\") && token.recaptcha_session.score < 0.2"
-    }
-  }
+func testAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs2(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
 
-  header_action {
-    request_headers_to_adds {
-      header_name  = "reCAPTCHA-Warning"
-      header_value = "high"
-    }
+	rule {
+		action   = "throttle"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withMultipleEnforceOnKeyConfigs2"
 
-    request_headers_to_adds {
-      header_name  = "X-Hello"
-      header_value = "World"
-    }
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "deny(429)"
 
-    request_headers_to_adds {
-      header_name  = "X-Resource"
-      header_value = "test"
-    }
-  }
+			rate_limit_threshold {
+				count = 10
+				interval_sec = 60
+			}
+
+			enforce_on_key = ""
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "REGION_CODE"
+			}
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "TLS_JA3_FINGERPRINT"
+			}
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "USER_IP"
+			}
+		}
+	}
 }
-`, context)
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withRateLimitOption_withMultipleEnforceOnKeyConfigs3(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+	description = "throttle rule with enforce_on_key_configs"
+
+	rule {
+		action   = "throttle"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule withMultipleEnforceOnKeyConfigs3"
+
+		rate_limit_options {
+			conform_action = "allow"
+			exceed_action = "deny(429)"
+
+			rate_limit_threshold {
+				count = 10
+				interval_sec = 60
+			}
+
+			enforce_on_key = ""
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "REGION_CODE"
+			}
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "TLS_JA4_FINGERPRINT"
+			}
+
+			enforce_on_key_configs {
+				enforce_on_key_type = "USER_IP"
+			}
+		}
+	}
+}
+`, spName)
+}
+
+func TestAccComputeSecurityPolicy_withRedirectOptionsRecaptcha(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRedirectOptionsRecaptcha(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withRedirectOptionsUpdate(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRedirectOptionsRecaptcha(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccComputeSecurityPolicy_withRedirectOptionsExternal(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccComputeSecurityPolicy_withRedirectOptionsExternal(t *testing.T) {
+	t.Parallel()
+
+	spName := fmt.Sprintf("tf-test-%s", acctest.RandString(t, 10))
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeSecurityPolicyDestroyProducer(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccComputeSecurityPolicy_withRedirectOptionsExternal(spName),
+			},
+			{
+				ResourceName:      "google_compute_security_policy.policy",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccComputeSecurityPolicy_withRedirectOptionsRecaptcha(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+
+	rule {
+		action   = "redirect"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+		redirect_options {
+			type = "GOOGLE_RECAPTCHA"
+		}
+	}
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withRedirectOptionsExternal(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name        = "%s"
+
+	rule {
+		action   = "redirect"
+		priority = "2147483647"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+		description = "default rule"
+		redirect_options {
+			type = "EXTERNAL_302"
+			target = "https://example.com"
+		}
+	}
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_withExprOptions(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name = "%s"
+
+	rule {
+		action      = "allow"
+		priority    = "2147483647"
+		description = "default rule"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+	}
+
+	rule {
+		action      = "deny(403)"
+		priority    = "2000"
+		description = "reCAPTCHA rule"
+		match {
+			expr {
+				expression = "request.path.endsWith('RegisterWithEmail') && token.recaptcha_action.score >= 0.8 && (token.recaptcha_action.valid)"
+			}
+			expr_options {
+				recaptcha_options {
+					action_token_site_keys = [
+						"placeholder-recaptcha-action-site-key-01",
+						"placeholder-recaptcha-action-site-key-02"
+					]
+					session_token_site_keys = [
+						"placeholder-recaptcha-session-site-key-1",
+						"placeholder-recaptcha-session-site-key-2"
+					]
+				}
+			}
+		}
+	}
+}
+`, spName)
+}
+
+func testAccComputeSecurityPolicy_modifyExprOptions(spName string) string {
+	return fmt.Sprintf(`
+resource "google_compute_security_policy" "policy" {
+	name = "%s"
+
+	rule {
+		action      = "allow"
+		priority    = "2147483647"
+		description = "default rule"
+		match {
+			versioned_expr = "SRC_IPS_V1"
+			config {
+				src_ip_ranges = ["*"]
+			}
+		}
+	}
+
+	rule {
+		action      = "deny(403)"
+		priority    = "2000"
+		description = "reCAPTCHA rule"
+		match {
+			expr {
+				expression = "request.path.endsWith('RegisterWithEmail') && token.recaptcha_action.score >= 0.8 && (token.recaptcha_action.valid)"
+			}
+			expr_options {
+				recaptcha_options {
+					action_token_site_keys = [
+						"placeholder-recaptcha-action-site-key-09",
+						"placeholder-recaptcha-action-site-key-08",
+						"placeholder-recaptcha-action-site-key-07"
+					]
+					session_token_site_keys = [
+						"placeholder-recaptcha-session-site-key-1"
+					]
+				}
+			}
+		}
+	}
+}
+`, spName)
 }
