@@ -78,7 +78,7 @@ resource "google_compute_security_policy" "policy" {
 
 ```hcl
 resource "google_compute_security_policy" "policy" {
-	name = "my-policy"
+  name = "my-policy"
 
   rule {
     action   = "allow"
@@ -121,40 +121,40 @@ A scenario example that won't cause any conflict between `enforce_on_key` and `e
 
 ```hcl
 resource "google_compute_security_policy" "policy" {
-	name        = "%s"
-	description = "throttle rule with enforce_on_key_configs"
+  name        = "%s"
+  description = "throttle rule with enforce_on_key_configs"
 
-	rule {
-		action   = "throttle"
-		priority = "2147483647"
-		match {
-			versioned_expr = "SRC_IPS_V1"
-			config {
-				src_ip_ranges = ["*"]
-			}
-		}
-		description = "default rule"
+  rule {
+    action   = "throttle"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    description = "default rule"
 
-		rate_limit_options {
-			conform_action = "allow"
-			exceed_action = "redirect"
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action = "redirect"
 
-			enforce_on_key = ""
+      enforce_on_key = ""
 
-			enforce_on_key_configs {
-				enforce_on_key_type = "IP"
-			}
-			exceed_redirect_options {
-				type = "EXTERNAL_302"
-				target = "<https://www.example.com>"
-			}
+      enforce_on_key_configs {
+        enforce_on_key_type = "IP"
+      }
+      exceed_redirect_options {
+        type = "EXTERNAL_302"
+        target = "<https://www.example.com>"
+      }
 
-			rate_limit_threshold {
-				count = 10
-				interval_sec = 60
-			}
-		}
-	}
+      rate_limit_threshold {
+        count = 10
+        interval_sec = 60
+      }
+    }
+  }
 }
 ```
 
@@ -207,7 +207,7 @@ The following arguments are supported:
 
 * `user_ip_request_headers` - (Optional) An optional list of case-insensitive request header names to use for resolving the callers client IP address.
 
-* `request_body_inspection_size` - (Optional, [Beta](https://terraform.io/docs/providers/google/guides/provider_versions.html)) The maximum request size chosen by the customer with Waf enabled. Values supported are "8KB", "16KB, "32KB", "48KB" and "64KB". Values are case insensitive.
+* `request_body_inspection_size` - (Optional) The maximum request size chosen by the customer with Waf enabled. Values supported are "8KB", "16KB, "32KB", "48KB" and "64KB". Values are case insensitive.
 
 <a name="nested_json_custom_config"></a>The `json_custom_config` block supports:
 
