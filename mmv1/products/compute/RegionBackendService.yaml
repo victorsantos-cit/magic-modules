@@ -144,6 +144,16 @@ examples:
     min_version: 'beta'
     vars:
       region_backend_service_name: 'region-service'
+  - name: 'region_backend_lb_neg_backend'
+    primary_resource_id: 'default'
+    min_version: 'beta'
+    vars:
+      ilb-network-endpoint: "ilb-network-endpoint-group-zonal"
+      ilb-health-check-zonal: "ilb-health-check-zonal" 
+      ilb-backend-service-zonal: "ilb-backend-service-zonal"
+      ilb-url-map-zonal: "ilb-url-map-zonal"
+      ilb-target-http-proxy-zonal: "ilb-target-http-proxy-zonal"
+      ilb-global-forwarding-rule-zonal: "ilb-global-forwarding-rule-zonal"     
 parameters:
   - name: 'region'
     type: ResourceRef
