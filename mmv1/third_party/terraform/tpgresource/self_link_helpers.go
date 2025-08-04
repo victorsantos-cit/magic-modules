@@ -15,6 +15,32 @@ import (
 func CompareResourceNames(_, old, new string, _ *schema.ResourceData) bool {
 	return GetResourceNameFromSelfLink(old) == GetResourceNameFromSelfLink(new)
 }
+func CompareSelfLinkCanonicalPaths(_, old, new string, _ *schema.ResourceData) bool {
+	return canonicalizeSelfLink(old) == canonicalizeSelfLink(new)
+}
+
+var (
+	rePrefix           = regexp.MustCompile(`(?i)^https?://[a-z0-9.-]*/compute/(v1|beta)/`)
+	reDuplicateSlashes = regexp.MustCompile(`/+`)
+)
+
+func canonicalizeSelfLink(link string) string {
+	if link == "" {
+		return ""
+	}
+
+	path := rePrefix.ReplaceAllString(link, "/")
+
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	path = reDuplicateSlashes.ReplaceAllString(path, "/")
+
+	path = strings.TrimSuffix(path, "/")
+
+	return strings.ToLower(path)
+}
 
 func CompareSelfLinkCanonicalPaths(_, old, new string, _ *schema.ResourceData) bool {
 	return canonicalizeSelfLink(old) == canonicalizeSelfLink(new)
