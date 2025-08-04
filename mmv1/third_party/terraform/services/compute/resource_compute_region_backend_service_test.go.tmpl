@@ -433,6 +433,227 @@ func TestAccComputeRegionBackendService_withLogConfig(t *testing.T) {
 	})
 }
 
+
+func TestAccComputeRegionBackendService_selfLinkCanonicalization(t *testing.T) {
+	t.Parallel()
+
+	rand := acctest.RandString(t, 10)
+	svcName := fmt.Sprintf("tf-bs-%s", rand)
+	igName := fmt.Sprintf("tf-ig-%s", rand)
+
+	zone := "us-central1-a"
+	region := "us-central1"
+
+	// Forma TF-reference + quatro variações literais
+	variants := []string{
+		"${google_compute_instance_group.ig.self_link}",
+		fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/${data.google_client_config.current.project}/zones/%s/instanceGroups/%s", zone, igName),
+		fmt.Sprintf("https://www.googleapis.com/compute/beta/projects/${data.google_client_config.current.project}/zones/%s/instanceGroups/%s", zone, igName),
+		fmt.Sprintf("//www.googleapis.com/compute/v1/projects/${data.google_client_config.current.project}/zones/%s/instanceGroups/%s", zone, igName),
+		fmt.Sprintf("/projects/${data.google_client_config.current.project}/zones/%s/instanceGroups/%s", zone, igName), // relative
+	}
+
+	var steps []resource.TestStep
+
+	// STEP-0 – cria com a referência Terraform (dependência garantida)
+	steps = append(steps, resource.TestStep{
+		Config: testAccComputeRegionBackendService_selfLinkCustom(
+			svcName, igName, zone, region, variants[0]),
+	})
+
+	// STEPs 1-3 – apenas plan, trocando v1 / beta / //  (plano deve ficar vazio)
+	for _, v := range variants[1:4] {
+		steps = append(steps, resource.TestStep{
+			Config: testAccComputeRegionBackendService_selfLinkCustom(
+				svcName, igName, zone, region, v),
+			PlanOnly:           true,
+			ExpectNonEmptyPlan: false,
+		})
+	}
+
+	// STEP-4 – aplica a forma “relative” e faz import-verify
+	steps = append(steps,
+		resource.TestStep{
+			Config: testAccComputeRegionBackendService_selfLinkCustom(
+				svcName, igName, zone, region, variants[4]),
+		},
+		resource.TestStep{
+			ResourceName:      "google_compute_region_backend_service.foobar",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
+	)
+
+	acctest.VcrTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccTestPreCheck(t) },
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories(t),
+		CheckDestroy:             testAccCheckComputeRegionBackendServiceDestroyProducer(t),
+		Steps:                    steps,
+	})
+}
+
+/* helper (unchanged, já contém depends_on) */
+func testAccComputeRegionBackendService_selfLinkCustom(
+	svcName, igName, zone, region, selfLink string,
+) string {
+	return fmt.Sprintf(`
+data "google_client_config" "current" {}
+
+resource "google_compute_network" "net" {
+  name                    = "%s-net"
+  auto_create_subnetworks = true
+}
+
+data "google_compute_image" "debian" {
+  family  = "debian-11"
+  project = "debian-cloud"
+}
+
+resource "google_compute_instance" "vm" {
+  name         = "%s-vm"
+  zone         = "%s"
+  machine_type = "e2-micro"
+
+  boot_disk {
+    initialize_params {
+      image = data.google_compute_image.debian.self_link
+    }
+  }
+
+  network_interface {
+    network = google_compute_network.net.id
+  }
+}
+
+resource "google_compute_instance_group" "ig" {
+  name      = "%s"
+  zone      = "%s"
+  instances = [google_compute_instance.vm.self_link]
+  network   = google_compute_network.net.id
+
+  named_port {
+    name = "tcp"
+    port = 80
+  }
+}
+
+resource "google_compute_region_health_check" "hc" {
+  name   = "%s-hc"
+  region = "%s"
+  tcp_health_check { port = 80 }
+}
+
+resource "google_compute_region_backend_service" "foobar" {
+  name                  = "%s"
+  region                = "%s"
+  protocol              = "TCP"
+  load_balancing_scheme = "INTERNAL"
+
+  backend {
+    balancing_mode = "CONNECTION"
+    group          = "%s"
+  }
+
+  health_checks = [google_compute_region_health_check.hc.id]
+
+  depends_on = [google_compute_instance_group.ig]
+}
+`,
+		igName, svcName, zone, igName, zone,
+		svcName, region, svcName, region, selfLink)
+}
+
+func testAccComputeRegionBackendService_selfLinkCommon(
+	svcName, igName, zone, region, urlPrefix string,
+) string {
+	return fmt.Sprintf(`
+data "google_client_config" "current" {}
+
+resource "google_compute_network" "net" {
+  name                    = "%s-net"
+  auto_create_subnetworks = true
+}
+
+data "google_compute_image" "debian" {
+  family  = "debian-11"
+  project = "debian-cloud"
+}
+
+resource "google_compute_instance" "vm" {
+  name         = "%s-vm"
+  zone         = "%s"
+  machine_type = "e2-micro"
+
+  boot_disk {
+    initialize_params { image = data.google_compute_image.debian.self_link }
+  }
+
+  network_interface { network = google_compute_network.net.id }
+}
+
+resource "google_compute_instance_group" "ig" {
+  name      = "%s"
+  zone      = "%s"
+  instances = [google_compute_instance.vm.self_link]
+  network   = google_compute_network.net.id
+
+  named_port {
+    name = "tcp"
+    port = 80
+  }
+}
+
+resource "google_compute_region_health_check" "hc" {
+  name   = "%s-hc"
+  region = "%s"
+
+  tcp_health_check { port = 80 }
+}
+
+resource "google_compute_region_backend_service" "foobar" {
+  name                  = "%s"
+  region                = "%s"
+  protocol              = "TCP"      # ok para INTERNAL
+  load_balancing_scheme = "INTERNAL"
+
+  backend {
+    balancing_mode = "CONNECTION"
+    group = "https://www.googleapis.com/compute/%s/projects/${data.google_client_config.current.project}/zones/%s/instanceGroups/${google_compute_instance_group.ig.name}"
+  }
+
+  health_checks = [google_compute_region_health_check.hc.id]
+}
+
+`,
+
+		igName,
+		svcName,
+		zone,
+		igName,
+		zone,
+		svcName,
+		region,
+		svcName,
+		region,
+		urlPrefix,
+		zone,
+	)
+}
+
+func testAccComputeRegionBackendService_selfLinkV1(
+	svcName, igName, zone, region string,
+) string {
+	return testAccComputeRegionBackendService_selfLinkCommon(
+		svcName, igName, zone, region, "v1")
+}
+
+func testAccComputeRegionBackendService_selfLinkBeta(
+	svcName, igName, zone, region string,
+) string {
+	return testAccComputeRegionBackendService_selfLinkCommon(
+		svcName, igName, zone, region, "beta")
+}
+
 func TestAccComputeRegionBackendService_withDynamicBackendCount(t *testing.T) {
 	t.Parallel()
 
