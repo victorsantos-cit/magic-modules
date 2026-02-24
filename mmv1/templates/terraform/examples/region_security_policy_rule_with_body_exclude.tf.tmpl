@@ -1,0 +1,38 @@
+resource "google_compute_region_security_policy" "default" {
+  region      = "asia-southeast1"
+  provider    = google-beta
+  name        = "{{index $.Vars "sec_policy_name"}}"
+  description = "basic global security policy"
+  type        = "CLOUD_ARMOR"
+
+  advanced_options_config {
+    json_parsing        = "STANDARD"
+    log_level           = "VERBOSE"
+  }
+}
+
+resource "google_compute_region_security_policy_rule" "{{$.PrimaryResourceId}}" {
+  region          = "asia-southeast1"
+  preview         = true
+  provider        = google-beta
+  security_policy = google_compute_region_security_policy.default.name
+  description     = "default rule"
+  action          = "deny(403)"
+  priority        = 2147483647
+
+  match {
+    versioned_expr = "SRC_IPS_V1"
+    config {
+      src_ip_ranges = ["*"]
+    }
+  }
+  preconfigured_waf_config {
+    exclusion {
+      target_rule_set = "sqli-v33-stable"
+
+      request_body {
+        operator  = "EQUALS_ANY"
+      }
+    }
+  }
+}
