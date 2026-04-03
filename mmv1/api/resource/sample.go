@@ -38,8 +38,14 @@ type Sample struct {
 	// unskipping the test. If this is not empty, the test will be skipped.
 	SkipTest string `yaml:"skip_test,omitempty"`
 
+	// SkipFunc is a function call to a custom skip check
+	SkipFunc string `yaml:"skip_func,omitempty"`
+
 	// Whether to skip generating tests for this resource
 	ExcludeTest bool `yaml:"exclude_test,omitempty"`
+
+	// Whether to EXCLUDE the first step from doc generation
+	ExcludeBasicDoc bool `yaml:"exclude_basic_doc,omitempty"`
 
 	// Specify which external providers are needed for the testcase.
 	// Think before adding as there is latency and adds an external dependency to
@@ -69,10 +75,6 @@ type Sample struct {
 	// If set, this will override the default resource type implied from the
 	// object parent
 	PrimaryResourceType string `yaml:"primary_resource_type,omitempty"`
-
-	// The name of the primary resource for use in IAM tests. IAM tests need
-	// a reference to the primary resource to create IAM policies for
-	PrimaryResourceName string `yaml:"primary_resource_name,omitempty"`
 
 	// Steps
 	Steps []*Step
