@@ -13,6 +13,7 @@
 
 ---
 name: 'SwpSecurityExtension'
+kind: 'compute#swpSecurityExtension'
 description: |
   'SwpSecurityExtension' is a resource that allows traffic forwarding to a callout backend to enhance security.
 references:
@@ -20,15 +21,30 @@ references:
     'Service Extensions for Secure Web Proxy': 'https://docs.cloud.google.com/service-extensions/docs/configure-extensions-for-swp'
 docs:
 base_url: 'projects/{{project}}/locations/{{location}}/swpSecurityExtensions'
-self_link: 'projects/{{project}}/locations/{{location}}/swpSecurityExtensions/{{name}}'
-create_url: 'projects/{{project}}/locations/{{location}}/swpSecurityExtensions?swpSecurityExtensionId={{name}}'
+has_self_link: true
+immutable: true
 update_verb: 'PATCH'
+collection_url_key: 'items'
+timeouts:
+  insert_minutes: 20
+  update_minutes: 20
+  delete_minutes: 20
 async:
+  actions: ['create', 'delete', 'update']
   type: 'OpAsync'
   operation:
     base_url: '{{op_id}}'
   result:
     resource_inside_response: false
+examples:
+  - name: 'swp_security_extension_basic'
+    primary_resource_id: 'swp-security-extension-basic'
+    min_version: 'beta'
+    test_env_vars:
+      project: 'PROJECT_ID'
+    vars:
+      name: 'swp-security-extension-basic'
+      location: us-west1
 properties:
   - name: 'name'
     type: String
@@ -39,11 +55,12 @@ properties:
     type: String
     description: 'Optional. A human-readable description of the resource.'
   - name: 'labels'
-    type: KeyValuePairs
+    type: KeyValueLabels
     description: 'Optional. Set of labels associated with the SwpSecurityExtension resource.'
   - name: 'gateways'
     type: Array
-    item_type: String
+    item_type:
+      type: String
     description: 'Required. References to the SecureWebGateway resource to which this service extension is attached.'
     required: true
   - name: 'extensionChains'
@@ -74,33 +91,36 @@ properties:
             properties:
               - name: 'name'
                 type: String
-                description: 'Optional. The name for this extension. Logged as part of HTTP request logs.'
+                description: 'Optional. The name for this extension.'
               - name: 'service'
                 type: String
-                description: 'Required. The reference to the service that runs the extension (BackendService URL).'
+                description: 'Required. The reference to the service that runs the extension.'
                 required: true
               - name: 'authority'
                 type: String
-                description: 'Optional. The :authority header in the gRPC request sent to the extension service.'
+                description: 'Optional. The :authority header in the gRPC request.'
               - name: 'timeout'
                 type: String
-                description: 'Optional. Specifies the timeout for each individual message on the stream (e.g., "0.5s").'
+                description: 'Optional. Specifies the timeout for each individual message.'
               - name: 'failOpen'
                 type: Boolean
-                description: 'Optional. Determines how the proxy behaves if the call fails or times out.'
+                description: 'Optional. Proxy behavior if the call fails.'
                 default_value: false
               - name: 'forwardHeaders'
                 type: Array
-                item_type: String
-                description: 'Optional. List of the HTTP headers to forward to the extension.'
+                item_type:
+                  type: String
+                description: 'Optional. List of the HTTP headers to forward.'
               - name: 'forwardAttributes'
                 type: Array
-                item_type: String
-                description: 'Optional. List of the Envoy attributes to forward to the extension server.'
+                item_type:
+                  type: String
+                description: 'Optional. List of the Envoy attributes to forward.'
               - name: 'supportedEvents'
                 type: Array
-                item_type: String
-                description: 'Optional. A set of events during request/response processing for which this extension is called.'
+                item_type:
+                  type: String
+                description: 'Optional. Set of events for which this extension is called.'
               - name: 'requestBodySendMode'
                 type: Enum
                 description: 'Optional. Configures the send mode for request body processing.'
@@ -117,10 +137,10 @@ properties:
                   - 'BODY_SEND_MODE_FULL_DUPLEX_STREAMED'
               - name: 'metadata'
                 type: KeyValuePairs
-                description: 'Optional. The metadata provided here is included in the ProcessingRequest message.'
+                description: 'Optional. Metadata included in the ProcessingRequest message.'
               - name: 'allowDynamicForwarding'
                 type: Boolean
-                description: 'Optional. Allows the response to set the com.google.envoy.dynamic_forwarding namespace.'
+                description: 'Optional. Allows response to set dynamic_forwarding namespace.'
               - name: 'observabilityMode'
                 type: Boolean
-                description: 'Optional. When set to true, calls to the extension backend are performed asynchronously.'
+                description: 'Optional. Asynchronous calls to the extension backend.'
