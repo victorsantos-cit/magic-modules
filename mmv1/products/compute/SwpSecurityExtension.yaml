@@ -1,0 +1,126 @@
+# Copyright 2026 Google Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: 'SwpSecurityExtension'
+description: |
+  'SwpSecurityExtension' is a resource that allows traffic forwarding to a callout backend to enhance security.
+references:
+  guides:
+    'Service Extensions for Secure Web Proxy': 'https://docs.cloud.google.com/service-extensions/docs/configure-extensions-for-swp'
+docs:
+base_url: 'projects/{{project}}/locations/{{location}}/swpSecurityExtensions'
+self_link: 'projects/{{project}}/locations/{{location}}/swpSecurityExtensions/{{name}}'
+create_url: 'projects/{{project}}/locations/{{location}}/swpSecurityExtensions?swpSecurityExtensionId={{name}}'
+update_verb: 'PATCH'
+async:
+  type: 'OpAsync'
+  operation:
+    base_url: '{{op_id}}'
+  result:
+    resource_inside_response: false
+properties:
+  - name: 'name'
+    type: String
+    description: 'Required. Identifier. Name of the SwpSecurityExtension resource.'
+    required: true
+    immutable: true
+  - name: 'description'
+    type: String
+    description: 'Optional. A human-readable description of the resource.'
+  - name: 'labels'
+    type: KeyValuePairs
+    description: 'Optional. Set of labels associated with the SwpSecurityExtension resource.'
+  - name: 'gateways'
+    type: Array
+    item_type: String
+    description: 'Required. References to the SecureWebGateway resource to which this service extension is attached.'
+    required: true
+  - name: 'extensionChains'
+    type: Array
+    description: 'Required. A set of ordered extension chains that contain the match conditions and extensions to execute.'
+    required: true
+    item_type:
+      type: NestedObject
+      properties:
+        - name: 'name'
+          type: String
+          description: 'The name of the extension chain.'
+          required: true
+        - name: 'matchCondition'
+          type: NestedObject
+          description: 'The condition that determines if the extensions in this chain are executed.'
+          properties:
+            - name: 'celExpression'
+              type: String
+              description: 'A Common Expression Language (CEL) expression.'
+              required: true
+        - name: 'extensions'
+          type: Array
+          description: 'A list of extensions to execute if the matchCondition is met.'
+          required: true
+          item_type:
+            type: NestedObject
+            properties:
+              - name: 'name'
+                type: String
+                description: 'Optional. The name for this extension. Logged as part of HTTP request logs.'
+              - name: 'service'
+                type: String
+                description: 'Required. The reference to the service that runs the extension (BackendService URL).'
+                required: true
+              - name: 'authority'
+                type: String
+                description: 'Optional. The :authority header in the gRPC request sent to the extension service.'
+              - name: 'timeout'
+                type: String
+                description: 'Optional. Specifies the timeout for each individual message on the stream (e.g., "0.5s").'
+              - name: 'failOpen'
+                type: Boolean
+                description: 'Optional. Determines how the proxy behaves if the call fails or times out.'
+                default_value: false
+              - name: 'forwardHeaders'
+                type: Array
+                item_type: String
+                description: 'Optional. List of the HTTP headers to forward to the extension.'
+              - name: 'forwardAttributes'
+                type: Array
+                item_type: String
+                description: 'Optional. List of the Envoy attributes to forward to the extension server.'
+              - name: 'supportedEvents'
+                type: Array
+                item_type: String
+                description: 'Optional. A set of events during request/response processing for which this extension is called.'
+              - name: 'requestBodySendMode'
+                type: Enum
+                description: 'Optional. Configures the send mode for request body processing.'
+                enum_values:
+                  - 'BODY_SEND_MODE_UNSPECIFIED'
+                  - 'BODY_SEND_MODE_STREAMED'
+                  - 'BODY_SEND_MODE_FULL_DUPLEX_STREAMED'
+              - name: 'responseBodySendMode'
+                type: Enum
+                description: 'Optional. Configures the send mode for response body processing.'
+                enum_values:
+                  - 'BODY_SEND_MODE_UNSPECIFIED'
+                  - 'BODY_SEND_MODE_STREAMED'
+                  - 'BODY_SEND_MODE_FULL_DUPLEX_STREAMED'
+              - name: 'metadata'
+                type: KeyValuePairs
+                description: 'Optional. The metadata provided here is included in the ProcessingRequest message.'
+              - name: 'allowDynamicForwarding'
+                type: Boolean
+                description: 'Optional. Allows the response to set the com.google.envoy.dynamic_forwarding namespace.'
+              - name: 'observabilityMode'
+                type: Boolean
+                description: 'Optional. When set to true, calls to the extension backend are performed asynchronously.'
