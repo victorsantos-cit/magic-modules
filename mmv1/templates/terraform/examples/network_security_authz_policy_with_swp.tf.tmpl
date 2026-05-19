@@ -1,0 +1,129 @@
+resource "time_sleep" "wait_for_gateway_cleanup" {
+  destroy_duration = "120s"
+
+  depends_on = [
+    google_network_services_authz_policy.{{$.PrimaryResourceId}}
+  ]
+}
+
+resource "google_compute_network" "default" {
+  name                    = "{{index $.Vars "network_name"}}"
+  project                 = "{{index $.TestEnvVars "project"}}"
+  auto_create_subnetworks = false
+
+}
+
+resource "google_compute_subnetwork" "default" {
+  name          = "{{index $.Vars "subnet_name"}}"
+  project       = "{{index $.TestEnvVars "project"}}"
+  region        = "us-west1"
+  ip_cidr_range = "10.1.2.0/24"
+  network       = google_compute_network.default.id
+
+}
+
+resource "google_compute_subnetwork" "proxy_only" {
+  name          = "{{index $.Vars "proxy_subnet_name"}}"
+  project       = "{{index $.TestEnvVars "project"}}"
+  region        = "us-west1"
+  ip_cidr_range = "10.129.0.0/23"
+  purpose       = "REGIONAL_MANAGED_PROXY"
+  role          = "ACTIVE"
+  network       = google_compute_network.default.id
+
+}
+
+resource "google_network_security_gateway_security_policy" "default" {
+  name     = "swp-policy-%{random_suffix}"
+  project  = "{{index $.TestEnvVars "project"}}"
+  location = "us-west1"
+}
+
+resource "google_compute_address" "swp_ip" {
+  name         = "{{index $.Vars "gateway_name"}}"
+  project      = "{{index $.TestEnvVars "project"}}"
+  region       = "us-west1"
+  subnetwork   = google_compute_subnetwork.default.id
+  address_type = "INTERNAL"
+}
+
+resource "google_network_services_gateway" "swp_gateway" {
+  name     = "{{index $.Vars "gateway_name"}}"
+  project  = "{{index $.TestEnvVars "project"}}"
+  location = "us-west1"
+  type     = "SECURE_WEB_GATEWAY"
+  
+  addresses = [google_compute_address.swp_ip.address]
+  ports     = [443]
+  scope     = "swp-scope"
+  network   = google_compute_network.default.id
+  subnetwork = google_compute_subnetwork.default.id
+  
+  gateway_security_policy = google_network_security_gateway_security_policy.default.id
+
+  depends_on = [
+    google_compute_subnetwork.proxy_only,
+    google_compute_subnetwork.default,
+    google_network_security_gateway_security_policy.default
+  ]
+}
+
+resource "google_network_services_authz_extension" "default" {
+  name                  = "{{index $.Vars "authz_extension_name"}}"
+  project               = "{{index $.TestEnvVars "project"}}"
+  location              = "us-west1"
+  load_balancing_scheme = "INTERNAL_MANAGED"
+  authority             = "ext11.com"
+  service               = "authz-server.internal.net"
+  timeout               = "0.1s"
+  fail_open             = false
+  forward_headers       = ["Authorization"]
+}
+
+resource "google_network_security_authz_policy" "{{$.PrimaryResourceId}}" {
+  name           = "{{index $.Vars "resource_name"}}"
+  project        = "{{index $.TestEnvVars "project"}}"
+  location       = "us-west1"
+  policy_profile = "REQUEST_AUTHZ"
+
+  target {
+    load_balancing_scheme = "INTERNAL_MANAGED"
+    resources             = [google_network_services_gateway.swp_gateway.id]
+  }
+
+  action = "CUSTOM"
+
+  custom_provider {
+    authz_extension {
+      resources = [google_network_services_authz_extension.default.id]
+    }
+  }
+
+  http_rules {
+    from {
+      sources {
+        principals {
+          principal_selector = "CLIENT_CERT_DNS_NAME_SAN"
+          principal {
+            exact = "spiffe://p.global.123.workload.id.goog/ns/ns1/sa/hellomcp"
+          }
+        }
+      }
+    }
+
+    to {
+      operations {
+        hosts {
+          exact = "example.com"
+        }
+        paths {
+          prefix = "/mcp"
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
