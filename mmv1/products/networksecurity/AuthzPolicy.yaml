@@ -75,6 +75,18 @@ examples:
     skip_test: true  # temporary b/484137930
     vars:
       policy_name: 'my-mcp-policy'
+  - name: 'network_security_authz_policy_with_swp'
+    primary_resource_id: 'default'
+    vars:
+      resource_name: 'my-authz-policy'
+      gateway_name: 'my-swp-gateway'
+      authz_extension_name: 'my-authz-ext'
+      network_name: 'swp-network'
+      subnet_name: 'swp-backend-subnet'
+      proxy_subnet_name: 'swp-proxy-only-subnet'
+    test_env_vars:
+      project: 'PROJECT_NAME'
+    external_providers: ["time"]
 parameters:
   - name: 'name'
     type: String
