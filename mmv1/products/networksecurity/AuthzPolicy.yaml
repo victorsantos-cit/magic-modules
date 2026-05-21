@@ -86,7 +86,6 @@ examples:
       proxy_subnet_name: 'swp-proxy-only-subnet'
     test_env_vars:
       project: 'PROJECT_NAME'
-    external_providers: ["time"]
 parameters:
   - name: 'name'
     type: String
