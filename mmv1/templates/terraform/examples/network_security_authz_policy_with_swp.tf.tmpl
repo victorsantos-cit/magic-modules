@@ -1,83 +1,128 @@
-resource "time_sleep" "wait_for_gateway_cleanup" {
-  destroy_duration = "120s"
-
-  depends_on = [
-    google_network_services_authz_policy.{{$.PrimaryResourceId}}
-  ]
-}
-
 resource "google_compute_network" "default" {
-  name                    = "{{index $.Vars "network_name"}}"
-  project                 = "{{index $.TestEnvVars "project"}}"
+  name                    = "authz-network-%{random_suffix}"
+  project                 = "%{project}"
   auto_create_subnetworks = false
-
 }
 
-resource "google_compute_subnetwork" "default" {
-  name          = "{{index $.Vars "subnet_name"}}"
-  project       = "{{index $.TestEnvVars "project"}}"
+resource "google_compute_subnetwork" "backend" {
+  name          = "backend-subnet-%{random_suffix}"
+  project       = "%{project}"
   region        = "us-west1"
   ip_cidr_range = "10.1.2.0/24"
   network       = google_compute_network.default.id
-
 }
 
 resource "google_compute_subnetwork" "proxy_only" {
-  name          = "{{index $.Vars "proxy_subnet_name"}}"
-  project       = "{{index $.TestEnvVars "project"}}"
+  name          = "proxy-only-subnet-%{random_suffix}"
+  project       = "%{project}"
   region        = "us-west1"
   ip_cidr_range = "10.129.0.0/23"
-  purpose       = "REGIONAL_MANAGED_PROXY"
-  role          = "ACTIVE"
-  network       = google_compute_network.default.id
 
+  purpose = "REGIONAL_MANAGED_PROXY"
+  role    = "ACTIVE"
+
+  network = google_compute_network.default.id
 }
 
-resource "google_network_security_gateway_security_policy" "default" {
-  name     = "swp-policy-%{random_suffix}"
-  project  = "{{index $.TestEnvVars "project"}}"
-  location = "us-west1"
-}
-
-resource "google_compute_address" "swp_ip" {
-  name         = "{{index $.Vars "gateway_name"}}"
-  project      = "{{index $.TestEnvVars "project"}}"
+resource "google_compute_address" "default" {
+  name         = "l7-ilb-ip-%{random_suffix}"
+  project      = "%{project}"
   region       = "us-west1"
-  subnetwork   = google_compute_subnetwork.default.id
+  subnetwork   = google_compute_subnetwork.backend.id
   address_type = "INTERNAL"
+  purpose      = "GCE_ENDPOINT"
 }
 
-resource "google_network_services_gateway" "swp_gateway" {
-  name     = "{{index $.Vars "gateway_name"}}"
-  project  = "{{index $.TestEnvVars "project"}}"
-  location = "us-west1"
-  type     = "SECURE_WEB_GATEWAY"
-  
-  addresses = [google_compute_address.swp_ip.address]
-  ports     = [443]
-  scope     = "swp-scope"
-  network   = google_compute_network.default.id
-  subnetwork = google_compute_subnetwork.default.id
-  
-  gateway_security_policy = google_network_security_gateway_security_policy.default.id
+resource "google_compute_region_health_check" "default" {
+  name    = "authz-hc-%{random_suffix}"
+  project = "%{project}"
+  region  = "us-west1"
 
-  depends_on = [
-    google_compute_subnetwork.proxy_only,
-    google_compute_subnetwork.default,
-    google_network_security_gateway_security_policy.default
+  http_health_check {
+    port_specification = "USE_SERVING_PORT"
+  }
+}
+
+resource "google_compute_region_backend_service" "lb_backend" {
+  name                  = "authz-lb-backend-%{random_suffix}"
+  project               = "%{project}"
+  region                = "us-west1"
+
+  protocol              = "HTTP"
+  load_balancing_scheme = "INTERNAL_MANAGED"
+
+  health_checks = [
+    google_compute_region_health_check.default.id
   ]
 }
 
-resource "google_network_services_authz_extension" "default" {
-  name                  = "{{index $.Vars "authz_extension_name"}}"
-  project               = "{{index $.TestEnvVars "project"}}"
-  location              = "us-west1"
+resource "google_compute_region_url_map" "default" {
+  name            = "authz-url-map-%{random_suffix}"
+  project         = "%{project}"
+  region          = "us-west1"
+
+  default_service = google_compute_region_backend_service.lb_backend.id
+}
+
+resource "google_compute_region_target_http_proxy" "default" {
+  name    = "authz-http-proxy-%{random_suffix}"
+  project = "%{project}"
+  region  = "us-west1"
+
+  url_map = google_compute_region_url_map.default.id
+}
+
+resource "google_compute_forwarding_rule" "default" {
+  name                  = "authz-forwarding-rule-%{random_suffix}"
+  project               = "%{project}"
+  region                = "us-west1"
+
   load_balancing_scheme = "INTERNAL_MANAGED"
-  authority             = "ext11.com"
-  service               = "authz-server.internal.net"
-  timeout               = "0.1s"
-  fail_open             = false
-  forward_headers       = ["Authorization"]
+
+  network    = google_compute_network.default.id
+  subnetwork = google_compute_subnetwork.backend.id
+
+  ip_protocol = "TCP"
+  port_range  = "80"
+
+  ip_address = google_compute_address.default.id
+  target     = google_compute_region_target_http_proxy.default.id
+
+  depends_on = [
+    google_compute_subnetwork.proxy_only
+  ]
+}
+
+resource "google_compute_region_backend_service" "authz_extension_backend" {
+  name    = "authz-ext-backend-%{random_suffix}"
+  project = "%{project}"
+  region  = "us-west1"
+
+  protocol              = "HTTP2"
+  load_balancing_scheme = "INTERNAL_MANAGED"
+  port_name             = "grpc"
+}
+
+resource "google_network_services_authz_extension" "default" {
+  name     = "authz-extension-%{random_suffix}"
+  project  = "%{project}"
+  location = "us-west1"
+
+  description = "Authorization extension for Internal Managed LB"
+
+  load_balancing_scheme = "INTERNAL_MANAGED"
+
+  authority = "ext11.com"
+
+  service = google_compute_region_backend_service.authz_extension_backend.self_link
+
+  timeout   = "0.1s"
+  fail_open = false
+
+  forward_headers = [
+    "Authorization",
+    "X-Request-Id"
+  ]
 }
 
 resource "google_network_security_authz_policy" "{{$.PrimaryResourceId}}" {
@@ -88,14 +133,19 @@ resource "google_network_security_authz_policy" "{{$.PrimaryResourceId}}" {
 
   target {
     load_balancing_scheme = "INTERNAL_MANAGED"
-    resources             = [google_network_services_gateway.swp_gateway.id]
+
+    resources = [
+      google_compute_forwarding_rule.default.self_link
+    ]
   }
 
   action = "CUSTOM"
 
   custom_provider {
     authz_extension {
-      resources = [google_network_services_authz_extension.default.id]
+      resources = [
+        google_network_services_authz_extension.default.id
+      ]
     }
   }
 
@@ -104,6 +154,7 @@ resource "google_network_security_authz_policy" "{{$.PrimaryResourceId}}" {
       sources {
         principals {
           principal_selector = "CLIENT_CERT_DNS_NAME_SAN"
+
           principal {
             exact = "spiffe://p.global.123.workload.id.goog/ns/ns1/sa/hellomcp"
           }
@@ -116,12 +167,23 @@ resource "google_network_security_authz_policy" "{{$.PrimaryResourceId}}" {
         hosts {
           exact = "example.com"
         }
+
         paths {
           prefix = "/mcp"
         }
       }
     }
   }
+
+  labels = {
+    environment = "test"
+    managed_by  = "terraform"
+  }
+
+  depends_on = [
+    google_compute_forwarding_rule.default,
+    google_network_services_authz_extension.default
+  ]
 
   lifecycle {
     create_before_destroy = false
