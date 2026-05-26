@@ -70,6 +70,21 @@ examples:
     primary_resource_id: 'default'
     vars:
       resource_name: 'my-authz-ext'
+      #nao funciona
+  - name: 'network_security_authz_policy_with_extension_basic'
+    min_version: 'beta'
+    primary_resource_id: 'default'
+    vars:
+      gateway_security_policy_name: 'authz-gateway-policy'
+      network_name: 'tf-test-authz-network'
+      subnet_name: 'tf-test-authz-subnet'
+      proxy_subnet_name: 'tf-test-authz-proxy-subnet'
+      gateway_name: 'tf-test-authz-gateway'
+      resource_name: 'tf-test-authz-policy'
+      authz_extension_name: 'tf-test-authz-extension'
+      backend_name: 'tf-test-authz-backend'
+    test_env_vars:
+      project: 'PROJECT_NAME'
 parameters:
   - name: 'name'
     type: String

@@ -86,6 +86,34 @@ examples:
       proxy_subnet_name: 'swp-proxy-only-subnet'
     test_env_vars:
       project: 'PROJECT_NAME'
+  #ainda nao ta implementado
+  - name: 'network_security_authz_policy_with_network_rules'
+    primary_resource_id: 'default'
+    min_version: beta
+    vars:
+      resource_name: 'my-authz-policy'
+      gateway_name: 'my-swp-gateway'
+      network_name: 'lb-network'
+      subnet_name: 'backend-subnet'
+      proxy_subnet_name: 'proxy-only-subnet'
+    test_env_vars:
+      project: 'PROJECT_NAME'
+  #Funciona
+  - name: 'network_security_authz_policy_with_lb'
+    primary_resource_id: 'default'
+    vars:
+      resource_name: 'my-authz-policy'
+      network_name: 'authz-network'
+      subnet_name: 'backend-subnet'
+      proxy_subnet_name: 'proxy-only-subnet'
+      forwarding_rule_name: 'authz-forwarding-rule'
+      health_check_name: 'authz-hc'
+      backend_service_name: 'authz-lb-backend'
+      url_map_name: 'authz-url-map'
+      target_proxy_name: 'authz-http-proxy'
+      authz_extension_name: 'authz-extension'
+    test_env_vars:
+      project: 'PROJECT_NAME'
 parameters:
   - name: 'name'
     type: String
